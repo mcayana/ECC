@@ -1,35 +1,50 @@
-**言語:** [English](../../README.md) | [Português (Brasil)](../pt-BR/README.md) | [简体中文](../../README.zh-CN.md) | [繁體中文](../zh-TW/README.md) | [日本語](README.md) | [한국어](../ko-KR/README.md) | [Türkçe](../tr/README.md) | [Русский](../ru/README.md) | [Tiếng Việt](../vi-VN/README.md) | [ไทย](../th/README.md) | [Deutsch](../de-DE/README.md)
+**言語:** [English](../../README.md) | [Português (Brasil)](../pt-BR/README.md) | [简体中文](../../README.zh-CN.md) | [繁體中文](../zh-TW/README.md) | [日本語](README.md) | [한국어](../ko-KR/README.md) | [Türkçe](../tr/README.md) | [Русский](../ru/README.md) | [Tiếng Việt](../vi-VN/README.md) | [ไทย](../th/README.md) | [Deutsch](../de-DE/README.md) | [Español](../es/README.md)
 
-# Everything Claude Code
+![ECC — the agent harness operating system](../../assets/hero.png)
 
-[![Stars](https://img.shields.io/github/stars/affaan-m/everything-claude-code?style=flat)](https://github.com/affaan-m/everything-claude-code/stargazers)
-[![Forks](https://img.shields.io/github/forks/affaan-m/everything-claude-code?style=flat)](https://github.com/affaan-m/everything-claude-code/network/members)
-[![Contributors](https://img.shields.io/github/contributors/affaan-m/everything-claude-code?style=flat)](https://github.com/affaan-m/everything-claude-code/graphs/contributors)
+[![Discord](https://img.shields.io/discord/1496644400590094540?logo=discord&logoColor=white&label=Join%20the%20Discord&color=5865F2)](https://discord.gg/36yGMHGFbR)
+[![Website](https://img.shields.io/badge/Website-ecc.tools-E07856?logo=googlechrome&logoColor=white)](https://ecc.tools)
+[![GitHub App](https://img.shields.io/badge/GitHub%20App-ECC%20Tools-181717?logo=github&logoColor=white)](https://github.com/apps/ecc-tools)
+[![Guides](https://img.shields.io/badge/Guides-Start%20here-1f6feb?logo=readme&logoColor=white)](#ガイド)
+
+[![Stars](https://img.shields.io/endpoint?url=https%3A%2F%2Fapi.ecc.tools%2Fbadge%2Fstars&style=flat)](https://github.com/affaan-m/ECC/stargazers)
+[![Forks](https://img.shields.io/endpoint?url=https%3A%2F%2Fapi.ecc.tools%2Fbadge%2Fforks&style=flat)](https://github.com/affaan-m/ECC/network/members)
+[![Contributors](https://img.shields.io/github/contributors/affaan-m/ECC?style=flat)](https://github.com/affaan-m/ECC/graphs/contributors)
+[![npm ecc-universal](https://img.shields.io/npm/dw/ecc-universal?label=ecc-universal%20weekly%20downloads&logo=npm)](https://www.npmjs.com/package/ecc-universal)
+[![npm ecc-agentshield](https://img.shields.io/npm/dw/ecc-agentshield?label=ecc-agentshield%20weekly%20downloads&logo=npm)](https://www.npmjs.com/package/ecc-agentshield)
+[![GitHub App Install](https://img.shields.io/endpoint?url=https%3A%2F%2Fapi.ecc.tools%2Fbadge%2Finstalls&logo=github)](https://github.com/marketplace/ecc-tools)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 ![Shell](https://img.shields.io/badge/-Shell-4EAA25?logo=gnu-bash&logoColor=white)
 ![TypeScript](https://img.shields.io/badge/-TypeScript-3178C6?logo=typescript&logoColor=white)
 ![Python](https://img.shields.io/badge/-Python-3776AB?logo=python&logoColor=white)
 ![Go](https://img.shields.io/badge/-Go-00ADD8?logo=go&logoColor=white)
 ![Java](https://img.shields.io/badge/-Java-ED8B00?logo=openjdk&logoColor=white)
+![Perl](https://img.shields.io/badge/-Perl-39457E?logo=perl&logoColor=white)
 ![Markdown](https://img.shields.io/badge/-Markdown-000000?logo=markdown&logoColor=white)
 
-> **140K+ stars** | **21K+ forks** | **170+ contributors** | **12+ language ecosystems**
+> WARNING: **公式インストール元のみを利用してください。** ECCは、検証済みのチャネルからのみインストールしてください: GitHubリポジトリ [github.com/affaan-m/ECC](https://github.com/affaan-m/ECC)、npmパッケージ [`ecc-universal`](https://www.npmjs.com/package/ecc-universal) および [`ecc-agentshield`](https://www.npmjs.com/package/ecc-agentshield)、[GitHub App](https://github.com/apps/ecc-tools)、プラグインスラッグ `ecc@ecc`、プロジェクトのウェブサイト [ecc.tools](https://ecc.tools)。サードパーティによる再アップロードや非公式のミラーは本プロジェクトの保守・レビューを受けておらず、マルウェアが含まれている可能性があります。
+
+**211.9K+ stars** | **32.5K+ forks** | **230+ contributors** | **12+ language ecosystems** | **Cross-harness agent workflows**
 
 ---
 
 <div align="center">
 
-**言語 / Language / 語言 / Dil / Язык / Ngôn ngữ**
+**言語 / Language / 語言 / Dil / Язык / Ngôn ngữ / Idioma**
 
-[**English**](../../README.md) | [Português (Brasil)](../pt-BR/README.md) | [简体中文](../../README.zh-CN.md) | [繁體中文](../zh-TW/README.md) | [日本語](README.md) | [한국어](../ko-KR/README.md) | [Türkçe](../tr/README.md) | [Русский](../ru/README.md) | [Tiếng Việt](../vi-VN/README.md) | [ไทย](../th/README.md) | [Deutsch](../de-DE/README.md)
+[**English**](../../README.md) | [Português (Brasil)](../pt-BR/README.md) | [简体中文](../../README.zh-CN.md) | [繁體中文](../zh-TW/README.md) | [日本語](README.md) | [한국어](../ko-KR/README.md) | [Türkçe](../tr/README.md) | [Русский](../ru/README.md) | [Tiếng Việt](../vi-VN/README.md) | [ไทย](../th/README.md) | [Deutsch](../de-DE/README.md) | [Español](../es/README.md)
 
 </div>
 
 ---
 
-**Anthropicハッカソン優勝者による完全なClaude Code設定集。**
+**エージェント作業のためのハーネスネイティブなオペレーターシステム。実際のマルチハーネスエンジニアリングワークフローから生まれました。**
 
-10ヶ月以上の集中的な日常使用により、実際のプロダクト構築の過程で進化した、本番環境対応のエージェント、スキル、フック、コマンド、ルール、MCP設定。
+単なる設定ファイル集ではありません。スキル、instinct(直感)、メモリ最適化、継続的学習、セキュリティスキャン、リサーチファーストの開発手法までを備えた完全なシステムです。実際のプロダクト構築における10ヶ月以上の集中的な日常使用を経て進化した、本番環境対応のエージェント、スキル、フック、ルール、MCP設定、そしてレガシーコマンドシムを提供します。
+
+**Codex**、**Claude Code**、**Cursor**、**OpenCode**、**Gemini**、**Zed**、**GitHub Copilot**など、さまざまなAIエージェントハーネスで動作します。
+
+ECC v2.0.0では、この再利用可能な基盤の上に公開のHermesオペレーターストーリーが追加されました。まず[Hermesセットアップガイド](../HERMES-SETUP.md)から始め、続けて[2.0.0リリースノート](../releases/2.0.0/release-notes.md)と[クロスハーネスアーキテクチャ](../architecture/cross-harness.md)をご確認ください。
 
 ---
 
@@ -69,9 +84,65 @@
 
 ## 新機能
 
+### v2.0.0 — The Agent Harness Operating System（2026年6月）
+
+261の公開スキル、control-plane基盤（ハーネス非依存のセッションアダプタ`ecc.session.v1`とMCPインベントリ`ecc.mcp.v1`）、並列エージェントワークツリー向けのworktree-lifecycleサービス、`orch-*`オーケストレーターファミリー、そして[ECC Discordコミュニティ](https://discord.gg/36yGMHGFbR)の開始。詳細な全ノートは[docs/releases/2.0.0/release-notes.md](../releases/2.0.0/release-notes.md)を参照してください。
+
+### v2.0.0-rc.1 — サーフェス刷新、オペレーターワークフロー、ECC 2.0 アルファ（2026年4月）
+
+- **Dashboard GUI** — 新しいTkinterベースのデスクトップアプリケーション（`ecc_dashboard.py`または`npm run dashboard`）。ダーク/ライトテーマ切り替え、フォントカスタマイズ、ヘッダーとタスクバーのプロジェクトロゴに対応
+- **実リポジトリへの公開サーフェス同期** — メタデータ、カタログ件数、プラグインマニフェスト、インストール向けドキュメントが実際のOSSサーフェスと一致するように更新（66エージェント、268スキル、84のレガシーコマンドシム）
+- **オペレーター/アウトバウンドワークフローの拡張** — `brand-voice`、`social-graph-ranker`、`connections-optimizer`、`customer-billing-ops`、`ecc-tools-cost-audit`、`google-workspace-ops`、`project-flow-ops`、`workspace-surface-audit`がオペレーター系ラインナップを充実
+- **メディア・配信ツール** — `manim-video`、`remotion-video-creation`、強化されたソーシャル配信サーフェスにより、技術解説動画やローンチコンテンツの制作も同じシステムの一部に
+- **フレームワーク/プロダクトサーフェスの拡大** — `nestjs-patterns`、より充実したCodex/OpenCodeインストールサーフェス、クロスハーネスパッケージングの拡張により、Claude Code以外でも使いやすいリポジトリに
+- **Itô予測市場スキルパック** — `ito-market-intelligence`、`ito-basket-compare`、`ito-trade-planner`、`ito-data-atlas-agent`、`prediction-market-oracle-research`、`prediction-market-risk-review`を追加。公開・非アドバイザリーのマーケット/バスケットワークフローを提供しつつ、Itôのライブ API アクセスはECC Toolsの課金とは別にゲート管理
+- **最適化スキルパック** — `parallel-execution-optimizer`、`benchmark-optimization-loop`、`data-throughput-accelerator`、`latency-critical-systems`、`recursive-decision-ledger`により、繰り返される速度/再帰系のプロンプトを、範囲を限定したベンチマーク・スループット・意思決定台帳ワークフローに変換
+- **ECC 2.0 アルファがリポジトリ内に同梱** — `ecc2/`内のRustコントロールプレーン試作がローカルでビルド可能になり、`dashboard`、`start`、`sessions`、`status`、`stop`、`resume`、`daemon`の各コマンドを提供。まだアルファ版であり、一般提供ではありません
+- **オペレーターステータススナップショット** — `ecc status --markdown --write status.md`により、ローカルの状態ストアを、準備状況・アクティブセッション・スキル実行の健全性・インストール状態・保留中のガバナンスイベント・Linear/GitHub/handoffsからの関連タスクを含む可搬なハンドオフ資料に変換。手動エントリには`ecc work-items upsert ...`、PR/Issueキューの状態には`ecc work-items sync-github --repo owner/repo`、準備状況に注意が必要な場合に自動化を失敗させるには`ecc status --exit-code`を使用
+- **エコシステムの強化** — AgentShield、ECC Toolsのコスト管理、課金ポータル、ウェブサイト刷新などが、別サイロに分散することなくコアプラグインを中心に継続して開発
+
+### v1.9.0 — 選択的インストール & 言語拡張（2026年3月）
+
+- **選択的インストールアーキテクチャ** — `install-plan.js`と`install-apply.js`によるマニフェスト駆動のインストールパイプラインで、コンポーネント単位のインストールが可能に。ステートストアがインストール済み内容を追跡し、差分更新を実現
+- **6つの新エージェント** — `typescript-reviewer`、`pytorch-build-resolver`、`java-build-resolver`、`java-reviewer`、`kotlin-reviewer`、`kotlin-build-resolver`により対応言語が10言語に拡大
+- **新スキル** — ディープラーニングワークフロー向け`pytorch-patterns`、API リファレンス調査向け`documentation-lookup`、モダンJSツールチェーン向け`bun-runtime`・`nextjs-turbopack`、加えて8つの運用ドメインスキルと`mcp-server-patterns`
+- **セッション/状態インフラ** — クエリCLI付きSQLiteステートストア、構造化記録用のセッションアダプタ、自己改善スキルのためのスキル進化基盤
+- **オーケストレーションの全面見直し** — ハーネス監査スコアリングの決定性向上、オーケストレーションステータス/ランチャー互換性の強化、5層ガードによるオブザーバーループ防止
+- **オブザーバーの信頼性向上** — スロットリングとテールサンプリングによるメモリ爆発の修正、サンドボックスアクセスの修正、遅延起動ロジック、再入防止ガード
+- **12言語エコシステム** — Java、PHP、Perl、Kotlin/Android/KMP、C++、Rust向けルールを新規追加。既存のTypeScript、Python、Go、commonルールに加わる
+- **コミュニティ貢献** — 韓国語・中国語翻訳、biomeフックの最適化、動画処理スキル、運用スキル、PowerShellインストーラー、Antigravity IDE対応
+- **CI強化** — 19件のテスト失敗を修正、カタログ件数の検証、インストールマニフェストの検証、テストスイート全体をグリーン化
+
+### v1.8.0 — ハーネスパフォーマンスシステム（2026年3月）
+
+- **ハーネスファーストのリリース** — ECCを単なる設定パックではなく、エージェントハーネスのパフォーマンスシステムとして明確に再定義
+- **フック信頼性の全面見直し** — SessionStartのルートフォールバック、Stopフェーズのセッションサマリー、脆弱なインラインワンライナーに代わるスクリプトベースのフック
+- **フックランタイム制御** — ファイルを編集せずにランタイム側でゲート制御できる`ECC_HOOK_PROFILE=minimal|standard|strict`と`ECC_DISABLED_HOOKS=...`
+- **新しいハーネスコマンド** — `/harness-audit`、`/loop-start`、`/loop-status`、`/quality-gate`、`/model-route`
+- **NanoClaw v2** — モデルルーティング、スキルのホットロード、セッションのブランチ/検索/エクスポート/圧縮/メトリクス
+- **クロスハーネスパリティ** — Claude Code、Cursor、OpenCode、Codexアプリ/CLI間で挙動を厳密に統一
+- **内部テスト997件が成功** — フック/ランタイムのリファクタリングと互換性更新後もテストスイート全体がグリーン
+
+### v1.7.0 — クロスプラットフォーム拡張 & プレゼンテーションビルダー（2026年2月）
+
+- **Codexアプリ + CLI対応** — `AGENTS.md`ベースの直接的なCodex対応、インストーラーのターゲティング、Codex向けドキュメント
+- **`frontend-slides`スキル** — 依存関係ゼロのHTMLプレゼンテーションビルダー。PPTX変換ガイダンスと厳密なビューポート適合ルール付き
+- **5つの新しい汎用ビジネス/コンテンツスキル** — `article-writing`、`content-engine`、`market-research`、`investor-materials`、`investor-outreach`
+- **ツール対応範囲の拡大** — Cursor、Codex、OpenCodeへの対応を強化し、同一リポジトリが主要ハーネス全体でクリーンに動作するように
+- **内部テスト992件** — プラグイン、フック、スキル、パッケージングにわたる検証・回帰テストの拡充
+
+### v1.6.0 — Codex CLI、AgentShield & マーケットプレイス（2026年2月）
+
+- **Codex CLI対応** — 新しい`/codex-setup`コマンドがOpenAI Codex CLI互換の`codex.md`を生成
+- **7つの新スキル** — `search-first`、`swift-actor-persistence`、`swift-protocol-di-testing`、`regex-vs-llm-structured-text`、`content-hash-cache-pattern`、`cost-aware-llm-pipeline`、`skill-stocktake`
+- **AgentShield統合** — `/security-scan`スキルがClaude Codeから直接AgentShieldを実行。1282テスト、102ルール
+- **GitHub Marketplace** — [github.com/marketplace/ecc-tools](https://github.com/marketplace/ecc-tools)でECC Tools GitHub Appが公開。無料/Pro/Enterpriseの各ティアに対応
+- **30件超のコミュニティPRをマージ** — 6言語にわたる30名のコントリビューターからの貢献
+- **内部テスト978件** — エージェント、スキル、コマンド、フック、ルールにわたる検証スイートの拡充
+
 ### v1.4.1 — バグ修正（2026年2月）
 
-- **instinctインポート時のコンテンツ喪失を修正** — `/instinct-import`実行時に`parse_instinct_file()`がfrontmatter後のすべてのコンテンツ（Action、Evidence、Examplesセクション）を暗黙的に削除していた問題を修正。コミュニティ貢献者@ericcai0814により解決されました（[#148](https://github.com/affaan-m/everything-claude-code/issues/148), [#161](https://github.com/affaan-m/everything-claude-code/pull/161)）
+- **instinctインポート時のコンテンツ喪失を修正** — `/instinct-import`実行時に`parse_instinct_file()`がfrontmatter後のすべてのコンテンツ（Action、Evidence、Examplesセクション）を暗黙的に削除していた問題を修正。コミュニティ貢献者@ericcai0814により解決されました（[#148](https://github.com/affaan-m/ECC/issues/148), [#161](https://github.com/affaan-m/ECC/pull/161)）
 
 ### v1.4.0 — マルチ言語ルール、インストールウィザード & PM2（2026年2月）
 
@@ -95,7 +166,7 @@
 - **セッション管理** — セッション履歴用の`/sessions`コマンド
 - **継続的学習 v2** — 信頼度スコアリング、インポート/エクスポート、進化を伴うinstinctベースの学習
 
-完全なチェンジログは[Releases](https://github.com/affaan-m/everything-claude-code/releases)を参照してください。
+完全なチェンジログは[Releases](https://github.com/affaan-m/ECC/releases)を参照してください。
 
 ---
 
