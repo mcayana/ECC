@@ -103,7 +103,64 @@
 
 2分以内に起動できます：
 
-### ステップ 1：プラグインをインストール
+### 1つのパスだけを選ぶ
+
+ほとんどのClaude Codeユーザーは、インストール方法を1つだけ選んで使用してください：
+
+- **推奨されるデフォルト:** Claude Codeプラグインをインストールし、本当に必要なルールフォルダだけを追加でコピーする。
+- **手動インストーラーを使うのは**、より細かい制御が必要な場合、プラグイン方式を完全に避けたい場合、またはお使いのClaude Codeのビルドがセルフホストのマーケットプレイスエントリの解決に問題を抱えている場合です。
+- **インストール方法を重ねて使わないでください。** 最もよくある壊れた構成は、まず`/plugin install`を実行し、その後に`install.sh --profile full`または`npx ecc-install --profile full`を実行してしまうケースです。
+
+すでに複数のインストール方法を重ねてしまい、状態が重複しているように見える場合は、このセクション後半の「ECCのリセット/アンインストール」まで読み飛ばしてください。
+
+### 低コンテキスト / フックなしパス
+
+フックが影響範囲として広すぎると感じる場合や、ECCのルール・エージェント・コマンド・コアワークフロースキルだけが必要な場合は、プラグインを使わずに最小構成の手動プロファイルを使用してください：
+
+```bash
+./install.sh --profile minimal --target claude
+```
+
+```powershell
+.\install.ps1 --profile minimal --target claude
+# または
+npx ecc-install --profile minimal --target claude
+```
+
+このプロファイルには`hooks-runtime`が意図的に含まれていません。
+
+通常のコアプロファイルを使いつつフックだけをオフにしたい場合は、以下を使用してください：
+
+```bash
+./install.sh --profile core --without baseline:hooks --target claude
+```
+
+あとからフックによるランタイム強制を追加したい場合のみ、以下を実行してください：
+
+```bash
+./install.sh --target claude --modules hooks-runtime
+```
+
+### まず適切なコンポーネントを見つける
+
+どのECCプロファイルやコンポーネントをインストールすべきか分からない場合は、任意のプロジェクトから同梱のアドバイザーに相談してください：
+
+```bash
+npx ecc consult "security reviews" --target claude
+```
+
+一致するコンポーネント、関連プロファイル、プレビュー/インストールコマンドが返されます。インストール前に正確なファイル計画を確認したい場合は、プレビューコマンドを先に使用してください。
+
+本番環境のML/MLOpsワークフロー向けには、インストールをオプトイン・コンポーネント限定のままにしておいてください：
+
+```bash
+npx ecc consult "mlops training model deployment" --target claude
+npx ecc install --profile minimal --target claude --with capability:machine-learning
+```
+
+### ステップ 1：プラグインをインストール（推奨）
+
+> NOTE: プラグインは手軽ですが、お使いのClaude Codeのビルドがセルフホストのマーケットプレイスエントリの解決に問題を抱えている場合は、下記のOSSインストーラーの方が依然として最も確実な方法です。
 
 ```bash
 # マーケットプレイスを追加
@@ -113,37 +170,159 @@
 /plugin install ecc@ecc
 ```
 
-### ステップ2：ルールをインストール（必須）
+### 命名 + マイグレーションに関する注記
 
-> WARNING: **重要:** Claude Codeプラグインは`rules`を自動配布できません。手動でインストールしてください：
+ECCには現在3つの公開識別子があり、それぞれ互換性はありません：
+
+- GitHubソースリポジトリ: `affaan-m/ECC`
+- Claudeマーケットプレイス/プラグイン識別子: `ecc@ecc`
+- npmパッケージ: `ecc-universal`
+
+これは意図的な設計です。Anthropicのマーケットプレイス/プラグインインストールは正規のプラグイン識別子でキー管理されるため、ECCは厳格なDesktop/APIバリデーターでもツール名やスラッシュコマンドの名前空間が十分短くなるよう`ecc@ecc`を使用しています。古い投稿では以前の長いマーケットプレイス識別子が表示されている場合がありますが、それはレガシーなエイリアスとして扱ってください。なお、npmパッケージは従来どおり`ecc-universal`のままのため、npmインストールとマーケットプレイスインストールでは意図的に異なる名前が使われています。
+
+### ステップ2：必要な場合のみルールをインストール
+
+> WARNING: **重要:** Claude Codeプラグインは`rules`を自動配布できません。
+>
+> すでに`/plugin install`でECCを導入している場合は、その後に**`./install.sh --profile full`、`.\install.ps1 --profile full`、`npx ecc-install --profile full`を実行しないでください**。プラグインはすでにECCのスキル・コマンド・フックを読み込んでいます。プラグインインストール後にフルインストーラーを実行すると、同じ面がユーザーディレクトリに重複コピーされ、スキルの重複やランタイム動作の重複が発生する可能性があります。
+>
+> プラグインインストールの場合は、必要な`rules/`ディレクトリだけを手動で`~/.claude/rules/ecc/`配下にコピーしてください。まず`rules/common`と、実際に使用する言語/フレームワークパックを1つ追加するところから始めてください。そのコンテキストをすべてClaudeに持たせたいと明示的に望む場合を除き、すべてのルールディレクトリをコピーしないでください。
+>
+> フルインストーラーは、プラグイン方式の代わりに完全な手動ECCインストールを行う場合にのみ使用してください。
+>
+> ローカルのClaude設定が消去/リセットされた場合でも、ECCを再購入する必要はありません。まず`node scripts/ecc.js list-installed`を実行し、その後`node scripts/ecc.js doctor`と`node scripts/ecc.js repair`を再インストール前に実行してください。多くの場合、これでセットアップを再構築せずにECC管理下のファイルを復元できます。問題がECC Toolsのアカウントまたはマーケットプレイスアクセスに関するものである場合は、課金/アカウント復旧を別途対応してください。
 
 ```bash
 # まずリポジトリをクローン
-git clone https://github.com/affaan-m/everything-claude-code.git
+git clone https://github.com/affaan-m/ECC.git
+cd ECC
 
-# 共通ルールをインストール（必須）
-cp -r everything-claude-code/rules/common ~/.claude/rules/common
+# 依存関係をインストール（お好みのパッケージマネージャーを選択）
+npm install        # または: pnpm install | yarn install | bun install
 
-# 言語固有ルールをインストール（スタックを選択）
-cp -r everything-claude-code/rules/typescript ~/.claude/rules/typescript
-cp -r everything-claude-code/rules/python ~/.claude/rules/python
-cp -r everything-claude-code/rules/golang ~/.claude/rules/golang
+# プラグインインストールパス: ECC専用の名前空間にルールだけをコピー
+mkdir -p ~/.claude/rules/ecc
+cp -R rules/common ~/.claude/rules/ecc/
+cp -R rules/typescript ~/.claude/rules/ecc/
+
+# 完全な手動ECCインストールパス（/plugin install の代わりに使用）
+# ./install.sh --profile full
 ```
+
+```powershell
+# Windows PowerShell
+
+# プラグインインストールパス: ECC専用の名前空間にルールだけをコピー
+New-Item -ItemType Directory -Force -Path "$HOME/.claude/rules/ecc" | Out-Null
+Copy-Item -Recurse rules/common "$HOME/.claude/rules/ecc/"
+Copy-Item -Recurse rules/typescript "$HOME/.claude/rules/ecc/"
+
+# 完全な手動ECCインストールパス（/plugin install の代わりに使用）
+# .\install.ps1 --profile full
+# npx ecc-install --profile full
+```
+
+手動インストール手順の詳細は`rules/`フォルダ内のREADMEを参照してください。ルールを手動でコピーする際は、相対参照が壊れたりファイル名が衝突したりしないよう、ディレクトリ内のファイル単体ではなく言語ディレクトリ全体（例: `rules/common`や`rules/golang`）をコピーしてください。
+
+### 完全な手動インストール（フォールバック）
+
+プラグイン方式を意図的に使わない場合にのみ使用してください：
+
+```bash
+./install.sh --profile full
+```
+
+```powershell
+.\install.ps1 --profile full
+# または
+npx ecc-install --profile full
+```
+
+このパスを選んだ場合は、そこで止めてください。`/plugin install`は併用しないでください。
+
+### ECCのリセット/アンインストール
+
+ECCが重複している、干渉している、あるいは壊れていると感じても、その上に重ねて再インストールしないでください。
+
+- **プラグイン方式:** Claude Codeからプラグインを削除し、`~/.claude/rules/ecc/`配下に手動でコピーした該当ルールフォルダを削除してください。
+- **手動インストーラー/CLI方式:** リポジトリのルートから、まず削除内容をプレビューしてください：
+
+```bash
+node scripts/uninstall.js --dry-run
+```
+
+続いて、ECC管理下のファイルを削除します：
+
+```bash
+node scripts/uninstall.js
+```
+
+以下のライフサイクルラッパーも使用できます：
+
+```bash
+node scripts/ecc.js list-installed
+node scripts/ecc.js doctor
+node scripts/ecc.js repair
+node scripts/ecc.js uninstall --dry-run
+```
+
+ECCは、自身のインストール状態に記録されているファイルのみを削除します。ECCがインストールしていない無関係なファイルが削除されることはありません。
+
+複数のインストール方法を重ねてしまった場合は、以下の順序で片付けてください：
+
+1. Claude Codeプラグインのインストールを削除する。
+2. リポジトリのルートからECCのアンインストールコマンドを実行し、インストール状態で管理されているファイルを削除する。
+3. 手動でコピーし、もう不要になった追加のルールフォルダを削除する。
+4. 1つの方法だけを使って、あらためて1回だけ再インストールする。
 
 ### ステップ3：使用開始
 
 ```bash
-# コマンドを試す（プラグインはネームスペース形式）
+# スキルが主要なワークフロー面です。
+# ECCがcommands/から移行を進めている間も、既存のスラッシュ形式のコマンド名は引き続き動作します。
+
+# プラグインインストールでは正規の名前空間形式を使用
 /ecc:plan "ユーザー認証を追加"
 
-# 手動インストール（オプション2）は短縮形式：
+# 手動インストールではより短いスラッシュ形式のまま：
 # /plan "ユーザー認証を追加"
 
 # 利用可能なコマンドを確認
 /plugin list ecc@ecc
 ```
 
-**完了です！** これで13のエージェント、43のスキル、31のコマンドにアクセスできます。
+**完了です！** これで67のエージェント、278のスキル、94の廃止コマンドシムにアクセスできます。
+
+### ダッシュボードGUI
+
+デスクトップダッシュボードを起動して、ECCのコンポーネントを視覚的に確認できます：
+
+```bash
+npm run dashboard
+# または
+python3 ./ecc_dashboard.py
+```
+
+**機能:**
+- タブ切り替え式インターフェース: エージェント、スキル、コマンド、ルール、設定
+- ダーク/ライトテーマの切り替え
+- フォントのカスタマイズ（フォントファミリー・サイズ）
+- ヘッダーとタスクバーのプロジェクトロゴ
+- 全コンポーネントを横断した検索・フィルタ
+
+### マルチモデルコマンドには別途セットアップが必要
+
+> WARNING: `multi-*`系のコマンドは、上記の基本的なプラグイン/ルールインストールの対象には**含まれません**。
+>
+> `/multi-plan`、`/multi-execute`、`/multi-backend`、`/multi-frontend`、`/multi-workflow`を使用するには、`ccg-workflow`ランタイムも別途インストールする必要があります。
+>
+> `npx ccg-workflow`で初期化してください。
+>
+> このランタイムは、これらのコマンドが前提とする以下のような外部依存を提供します：
+> - `~/.claude/bin/codeagent-wrapper`
+> - `~/.claude/.ccg/prompts/*`
+>
+> `ccg-workflow`がない場合、これらの`multi-*`コマンドは正しく動作しません。
 
 ---
 
@@ -410,13 +589,13 @@ claude --version
 
 > WARNING: **貢献者向け:** `.claude-plugin/plugin.json`に`"hooks"`フィールドを追加しないでください。これは回帰テストで強制されます。
 
-Claude Code v2.1+は、インストール済みプラグインの`hooks/hooks.json`（規約）を自動読み込みします。`plugin.json`で明示的に宣言するとエラーが発生します：
+Claude Code v2.1+は、インストール済みプラグインの`hooks/hooks.json`を規約に従って自動読み込みします。`plugin.json`で明示的に宣言すると、重複検出エラーが発生します：
 
 ```
-Duplicate hook file detected: ./hooks/hooks.json is already resolved to a loaded file
+Duplicate hooks file detected: ./hooks/hooks.json resolves to already-loaded file
 ```
 
-**背景:** これは本リポジトリで複数の修正/リバート循環を引き起こしました（[#29](https://github.com/affaan-m/everything-claude-code/issues/29), [#52](https://github.com/affaan-m/everything-claude-code/issues/52), [#103](https://github.com/affaan-m/everything-claude-code/issues/103)）。Claude Codeバージョン間で動作が変わったため混乱がありました。今後を防ぐため回帰テストがあります。
+**背景:** これは本リポジトリで複数の修正/リバート循環を引き起こしました（[#29](https://github.com/affaan-m/ECC/issues/29), [#52](https://github.com/affaan-m/ECC/issues/52), [#103](https://github.com/affaan-m/ECC/issues/103)）。Claude Codeバージョン間で動作が変わったため混乱がありました。再発を防ぐため、現在は回帰テストが導入されています。
 
 ---
 
@@ -442,7 +621,7 @@ Duplicate hook file detected: ./hooks/hooks.json is already resolved to a loaded
     "ecc": {
       "source": {
         "source": "github",
-        "repo": "affaan-m/everything-claude-code"
+        "repo": "affaan-m/ECC"
       }
     }
   },
@@ -458,19 +637,21 @@ Duplicate hook file detected: ./hooks/hooks.json is already resolved to a loaded
 >
 > ```bash
 > # まずリポジトリをクローン
-> git clone https://github.com/affaan-m/everything-claude-code.git
+> git clone https://github.com/affaan-m/ECC.git
+> cd ECC
 >
 > # オプション A：ユーザーレベルルール（すべてのプロジェクトに適用）
-> mkdir -p ~/.claude/rules
-> cp -r everything-claude-code/rules/common ~/.claude/rules/common
-> cp -r everything-claude-code/rules/typescript ~/.claude/rules/typescript   # スタックを選択
-> cp -r everything-claude-code/rules/python ~/.claude/rules/python
-> cp -r everything-claude-code/rules/golang ~/.claude/rules/golang
+> mkdir -p ~/.claude/rules/ecc
+> cp -r rules/common ~/.claude/rules/ecc/
+> cp -r rules/typescript ~/.claude/rules/ecc/   # スタックを選択
+> cp -r rules/python ~/.claude/rules/ecc/
+> cp -r rules/golang ~/.claude/rules/ecc/
+> cp -r rules/php ~/.claude/rules/ecc/
 >
 > # オプション B：プロジェクトレベルルール（現在のプロジェクトのみ）
-> mkdir -p .claude/rules
-> cp -r everything-claude-code/rules/common .claude/rules/common
-> cp -r everything-claude-code/rules/typescript .claude/rules/typescript     # スタックを選択
+> mkdir -p .claude/rules/ecc
+> cp -r rules/common .claude/rules/ecc/
+> cp -r rules/typescript .claude/rules/ecc/     # スタックを選択
 > ```
 
 ---
@@ -481,33 +662,81 @@ Duplicate hook file detected: ./hooks/hooks.json is already resolved to a loaded
 
 ```bash
 # リポジトリをクローン
-git clone https://github.com/affaan-m/everything-claude-code.git
+git clone https://github.com/affaan-m/ECC.git
+cd ECC
 
 # エージェントを Claude 設定にコピー
-cp everything-claude-code/agents/*.md ~/.claude/agents/
+cp agents/*.md ~/.claude/agents/
 
 # ルール（共通 + 言語固有）をコピー
-cp -r everything-claude-code/rules/common ~/.claude/rules/common
-cp -r everything-claude-code/rules/typescript ~/.claude/rules/typescript   # スタックを選択
-cp -r everything-claude-code/rules/python ~/.claude/rules/python
-cp -r everything-claude-code/rules/golang ~/.claude/rules/golang
+mkdir -p ~/.claude/rules/ecc
+cp -r rules/common ~/.claude/rules/ecc/
+cp -r rules/typescript ~/.claude/rules/ecc/   # スタックを選択
+cp -r rules/python ~/.claude/rules/ecc/
+cp -r rules/golang ~/.claude/rules/ecc/
+cp -r rules/php ~/.claude/rules/ecc/
+cp -r rules/arkts ~/.claude/rules/ecc/
 
-# コマンドをコピー
-cp everything-claude-code/commands/*.md ~/.claude/commands/
+# スキルを先にコピー（主要なワークフロー面のため）
+# 推奨（初めての方）：コア/汎用スキルのみ
+mkdir -p ~/.claude/skills
+cp -r .agents/skills/* ~/.claude/skills/
+cp -r skills/search-first ~/.claude/skills/
+# Claude Code は ~/.claude/skills 直下の子ディレクトリからのみスキルを読み込みます。
+# 手動インストールしたスキルを ~/.claude/skills/ecc/ のようにネストさせないでください。
 
-# スキルをコピー
-cp -r everything-claude-code/skills/* ~/.claude/skills/
+# 任意：必要な場合のみニッチ/フレームワーク固有のスキルを追加
+# for s in django-patterns django-tdd laravel-patterns springboot-patterns quarkus-patterns; do
+# cp -r skills/$s ~/.claude/skills/
+# done
+
+# 任意：移行期間中のみスラッシュコマンドの互換性を維持
+mkdir -p ~/.claude/commands
+cp commands/*.md ~/.claude/commands/
+
+# 廃止されたシムは legacy-command-shims/commands/ にあります。
+# `/tdd` のような旧名称のコマンドが引き続き必要な場合のみ、そこから個別にファイルをコピーしてください。
 ```
 
-#### settings.json にフックを追加
+#### フックをインストール
 
-手動インストール時のみ、`hooks/hooks.json` のフックを `~/.claude/settings.json` にコピーします。
+リポジトリ直下の `hooks/hooks.json` を、そのまま `~/.claude/settings.json` や `~/.claude/hooks/hooks.json` にコピーしないでください。このファイルはプラグイン/リポジトリ向けで、ECCインストーラー経由でインストールするか、プラグインとして読み込まれることを前提としています。そのため生コピーはサポートされている手動インストール手順ではありません。
 
-`/plugin install` で ECC を導入した場合は、これらのフックを `settings.json` にコピーしないでください。Claude Code v2.1+ はプラグインの `hooks/hooks.json` を自動読み込みするため、二重登録すると重複実行や `${CLAUDE_PLUGIN_ROOT}` の解決失敗が発生します。
+コマンドパスが正しく書き換えられるよう、インストーラーを使ってClaude用のフックランタイムのみをインストールしてください：
+
+```bash
+# macOS / Linux
+bash ./install.sh --target claude --modules hooks-runtime
+```
+
+```powershell
+# Windows PowerShell
+pwsh -File .\install.ps1 --target claude --modules hooks-runtime
+```
+
+これにより、解決済みのフックが `~/.claude/hooks/hooks.json` に書き込まれ、既存の `~/.claude/settings.json` はそのまま維持されます。
+
+`/plugin install` でECCを導入した場合は、これらのフックを `settings.json` にコピーしないでください。Claude Code v2.1+ はプラグインの `hooks/hooks.json` をすでに自動読み込みしているため、二重登録すると重複実行やクロスプラットフォームでのフック競合が発生します。
+
+Windows注記: Claudeの設定ディレクトリは `%USERPROFILE%\.claude` であり、`~/claude` ではありません。
 
 #### MCP を設定
 
-`mcp-configs/mcp-servers.json` から必要な MCP サーバーを `~/.claude.json` にコピーします。
+Claudeプラグインとしてインストールした場合、ECCに同梱されたMCPサーバー定義は意図的に自動有効化されません。これは、制限の厳しいサードパーティゲートウェイでプラグインのMCPツール名が長くなりすぎる問題を避けつつ、手動でのMCPセットアップも可能にしておくためです。
+
+稼働中のClaude Codeに対してMCPサーバーの変更を行う場合は、Claude Codeの `/mcp` コマンドまたはCLI経由のMCP管理を使用してください。`/mcp` はClaude Codeランタイム上での無効化に使い、その選択内容は `~/.claude.json` に保存されます。
+
+リポジトリローカルでMCPにアクセスしたい場合は、`mcp-configs/mcp-servers.json` から必要なMCPサーバー定義を、プロジェクトスコープの `.mcp.json` にコピーしてください。
+
+ECCが標準で同梱するコネクタは `chrome-devtools` の1つだけです。それ以外はすべて、CLI/REST APIをラップするスキルか、任意で追加できるカタログエントリです。このルールと、これまでのデフォルト6件を廃止した2026年6月の監査結果は [docs/MCP-CONNECTOR-POLICY.md](../MCP-CONNECTOR-POLICY.md) にまとめられています。
+
+すでに自分でECC同梱のMCPを運用している場合は、以下を設定してください：
+
+```bash
+export ECC_DISABLED_MCPS="chrome-devtools"
+```
+
+ECC管理下のインストールおよびCodex同期フローは、これらの同梱サーバーを重複して追加する代わりにスキップまたは削除します。`ECC_DISABLED_MCPS` はECCのインストール/同期時に使うフィルタであり、Claude Codeランタイム上のトグルではありません。
 
 **重要:** `YOUR_*_HERE`プレースホルダーを実際のAPIキーに置き換えてください。
 
