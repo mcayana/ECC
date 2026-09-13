@@ -9,6 +9,7 @@ const path = require('path');
 const fs = require('fs');
 const os = require('os');
 const { execFileSync, spawn, spawnSync } = require('child_process');
+const { readHooksConfig } = require('../../scripts/lib/hooks-config');
 
 const SKIP_BASH = process.platform === 'win32';
 
@@ -594,6 +595,64 @@ async function runTests() {
         assert.ok(hex.stderr.includes('Injecting 4 instinct(s)'), `hex threshold (0x1) should fall back to the 0.7 default and inject the four 0.9 instincts, stderr: ${hex.stderr}`);
       } finally {
         fs.rmSync(isoHome, { recursive: true, force: true });
+      }
+    })
+  )
+    passed++;
+  else failed++;
+
+  if (
+    await asyncTest('ranks stack-relevant instincts above higher-confidence unrelated ones (#2371)', async () => {
+      const isoHome = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-instinct-relevance-'));
+      const homunculusDir = path.join(isoHome, 'homunculus');
+      const instinctsDir = path.join(homunculusDir, 'instincts', 'personal');
+      fs.mkdirSync(instinctsDir, { recursive: true });
+      // A stack-matching 0.75 instinct and an unrelated higher-confidence 0.9.
+      fs.writeFileSync(
+        path.join(instinctsDir, 'terraform-first.md'),
+        '---\nid: terraform-first\nconfidence: 0.75\ndomain: terraform\n---\n## Action\nRun terraform plan before every apply.\n'
+      );
+      fs.writeFileSync(
+        path.join(instinctsDir, 'unrelated-high.md'),
+        '---\nid: unrelated-high\nconfidence: 0.9\ndomain: python\n---\n## Action\nPin Python dependencies in requirements.txt.\n'
+      );
+      // A project root that detects as terraform via a *.tf marker.
+      const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-tf-project-'));
+      fs.writeFileSync(path.join(projectRoot, 'main.tf'), 'resource "null_resource" "x" {}\n');
+
+      const baseEnv = {
+        HOME: isoHome,
+        USERPROFILE: isoHome,
+        CLV2_HOMUNCULUS_DIR: homunculusDir,
+        CLAUDE_PROJECT_DIR: projectRoot,
+        ECC_INSTINCT_RELEVANCE_RANKING: 'on',
+        ECC_INSTINCT_CONFIDENCE_THRESHOLD: '0.7',
+        ECC_MAX_INJECTED_INSTINCTS: '6',
+      };
+
+      try {
+        const on = await runScript(path.join(scriptsDir, 'session-start.js'), '', baseEnv);
+        assert.strictEqual(on.code, 0);
+        const ctxOn = getSessionStartAdditionalContext(on.stdout);
+        const tfOn = ctxOn.indexOf('Run terraform plan before every apply.');
+        const pyOn = ctxOn.indexOf('Pin Python dependencies in requirements.txt.');
+        assert.ok(tfOn !== -1 && pyOn !== -1, `both instincts should inject, ctx: ${ctxOn}`);
+        assert.ok(tfOn < pyOn, `stack-matching 0.75 should rank above unrelated 0.9 when relevance is on, ctx: ${ctxOn}`);
+
+        // Opting out restores pure confidence ordering (0.9 before 0.75).
+        const off = await runScript(path.join(scriptsDir, 'session-start.js'), '', {
+          ...baseEnv,
+          ECC_INSTINCT_RELEVANCE_RANKING: 'off',
+        });
+        assert.strictEqual(off.code, 0);
+        const ctxOff = getSessionStartAdditionalContext(off.stdout);
+        const tfOff = ctxOff.indexOf('Run terraform plan before every apply.');
+        const pyOff = ctxOff.indexOf('Pin Python dependencies in requirements.txt.');
+        assert.ok(tfOff !== -1 && pyOff !== -1, `both instincts should still inject, ctx: ${ctxOff}`);
+        assert.ok(pyOff < tfOff, `with ranking off, higher-confidence 0.9 should rank first, ctx: ${ctxOff}`);
+      } finally {
+        fs.rmSync(isoHome, { recursive: true, force: true });
+        fs.rmSync(projectRoot, { recursive: true, force: true });
       }
     })
   )
@@ -1247,7 +1306,9 @@ async function runTests() {
 
       // Create an active .tmp session file
       const sessionFile = path.join(sessionsDir, '2026-02-11-test-session.tmp');
-      fs.writeFileSync(sessionFile, '# Session: 2026-02-11\n**Started:** 10:00\n');
+      fs.writeFileSync(sessionFile, buildSessionStartFixture('**Started:** 10:00', {
+        title: '# Session: 2026-02-11'
+      }));
 
       try {
         await runScript(path.join(scriptsDir, 'pre-compact.js'), '', {
@@ -2059,6 +2120,41 @@ async function runTests() {
   else failed++;
 
   if (
+    await asyncTest('keeps isMeta human prompts while filtering structured transcript noise', async () => {
+      const testDir = createTestDir();
+      const transcriptPath = path.join(testDir, 'transcript.jsonl');
+      const lines = [
+        JSON.stringify({ type: 'user', isMeta: true, content: 'Prompt delivered by a channel plugin' }),
+        JSON.stringify({ type: 'user', isMeta: true, content: '<system-reminder>internal harness context</system-reminder>' }),
+        JSON.stringify({
+          type: 'user',
+          message: { role: 'user', content: [{ type: 'tool_result', content: 'tool output' }] },
+        }),
+      ];
+      fs.writeFileSync(transcriptPath, lines.join('\n'));
+
+      const result = await runScript(
+        path.join(scriptsDir, 'session-end.js'),
+        JSON.stringify({ transcript_path: transcriptPath }),
+        { HOME: testDir, USERPROFILE: testDir }
+      );
+      assert.strictEqual(result.code, 0);
+
+      const sessionsDir = getCanonicalSessionsDir(testDir);
+      const sessionFiles = fs.readdirSync(sessionsDir).filter(file => file.endsWith('.tmp'));
+      assert.strictEqual(sessionFiles.length, 1, 'Should create one session file');
+      const content = fs.readFileSync(path.join(sessionsDir, sessionFiles[0]), 'utf8');
+      assert.ok(content.includes('Prompt delivered by a channel plugin'));
+      assert.ok(!content.includes('internal harness context'));
+      assert.ok(!content.includes('tool output'));
+      assert.ok(content.includes('Total user messages: 1'));
+      cleanupTestDir(testDir);
+    })
+  )
+    passed++;
+  else failed++;
+
+  if (
     await asyncTest('extracts tool names and file paths from transcript', async () => {
       const testDir = createTestDir();
       const transcriptPath = path.join(testDir, 'transcript.jsonl');
@@ -2478,7 +2574,7 @@ async function runTests() {
   if (
     test('hooks.json consolidates PreToolUse Bash and all PostToolUse hooks', () => {
       const hooksPath = path.join(__dirname, '..', '..', 'hooks', 'hooks.json');
-      const hooks = JSON.parse(fs.readFileSync(hooksPath, 'utf8'));
+      const hooks = readHooksConfig(hooksPath);
 
       const preBash = hooks.hooks.PreToolUse.filter(entry => entry.matcher === 'Bash');
       const postEntries = hooks.hooks.PostToolUse;
@@ -2490,7 +2586,7 @@ async function runTests() {
         ['post:dispatcher:sync', 'post:dispatcher:async'],
         'PostToolUse should have one sync and one async dispatcher'
       );
-      assert.ok(postEntries.every(entry => entry.matcher === '*'));
+      assert.ok(postEntries.every(entry => entry.matcher === '.*'));
 
       const preCommand = Array.isArray(preBash[0].hooks[0].command) ? preBash[0].hooks[0].command.join(' ') : preBash[0].hooks[0].command;
 
@@ -2499,6 +2595,123 @@ async function runTests() {
       assert.ok(postEntries[0].hooks[0].command.endsWith('" sync'));
       assert.ok(postEntries[1].hooks[0].command.includes('posttooluse-dispatcher.js'));
       assert.ok(postEntries[1].hooks[0].command.endsWith('" async'));
+    })
+  )
+    passed++;
+  else failed++;
+
+  if (
+    test('hooks.json gives PowerShell dedicated GateGuard and governance routes', () => {
+      const hooksPath = path.join(__dirname, '..', '..', 'hooks', 'hooks.json');
+      const hooks = readHooksConfig(hooksPath);
+      const powerShellRoutes = hooks.hooks.PreToolUse.filter(entry => entry.matcher === 'PowerShell');
+      const governanceRoute = hooks.hooks.PreToolUse.find(entry => entry.id === 'pre:governance-capture');
+
+      assert.strictEqual(
+        powerShellRoutes.length,
+        1,
+        'Should have exactly one dedicated PreToolUse PowerShell route'
+      );
+      assert.strictEqual(
+        powerShellRoutes[0].id,
+        'pre:powershell:gateguard-fact-force',
+        'PowerShell should use its independently configurable GateGuard hook ID'
+      );
+      assert.ok(
+        powerShellRoutes[0].hooks[0].command.includes('pre:powershell:gateguard-fact-force'),
+        'Configured command should preserve the PowerShell GateGuard hook ID'
+      );
+      assert.ok(
+        powerShellRoutes[0].hooks[0].command.includes('scripts/hooks/gateguard-fact-force.js'),
+        'PowerShell route should invoke GateGuard without Bash-only preflight hooks'
+      );
+      assert.ok(governanceRoute, 'PreToolUse governance route should exist');
+      assert.ok(
+        governanceRoute.matcher.split('|').includes('PowerShell'),
+        'PreToolUse governance matcher should include PowerShell'
+      );
+      assert.ok(
+        hooks.hooks.PostToolUse.every(entry => entry.matcher === '.*'),
+        'Top-level PostToolUse dispatchers should preserve current-main wildcard matchers'
+      );
+    })
+  )
+    passed++;
+  else failed++;
+
+  if (
+    test('configured PowerShell routes enforce denial and emit redacted governance evidence', () => {
+      const root = path.join(__dirname, '..', '..');
+      const hooks = readHooksConfig(path.join(root, 'hooks', 'hooks.json'));
+      const gateRoute = hooks.hooks.PreToolUse.find(entry => entry.id === 'pre:powershell:gateguard-fact-force');
+      const governanceRoute = hooks.hooks.PreToolUse.find(entry => entry.id === 'pre:governance-capture');
+      const stateDir = createTestDir();
+      const command = 'Remove-Item -Force C:/private/configured-route-sentinel';
+      const payload = JSON.stringify({
+        tool_name: 'PowerShell',
+        tool_input: { command }
+      });
+      const env = {
+        ...process.env,
+        CLAUDE_PLUGIN_ROOT: root,
+        ECC_HOOK_PROFILE: 'standard',
+        GATEGUARD_STATE_DIR: stateDir,
+        CLAUDE_SESSION_ID: 'ecc039-configured-route-test'
+      };
+      for (const key of ['ECC_GATEGUARD', 'GATEGUARD_DISABLED', 'GATEGUARD_BASH_ROUTINE_DISABLED', 'ECC_DISABLED_HOOKS']) {
+        delete env[key];
+      }
+
+      try {
+        const gated = spawnSync(gateRoute.hooks[0].command, {
+          cwd: root,
+          env,
+          input: payload,
+          encoding: 'utf8',
+          shell: true,
+          timeout: 15000
+        });
+        assert.strictEqual(gated.status, 0, gated.stderr);
+        assert.strictEqual(
+          JSON.parse(gated.stdout).hookSpecificOutput?.permissionDecision,
+          'deny',
+          'exact configured GateGuard command should deny destructive PowerShell'
+        );
+
+        const governed = spawnSync(governanceRoute.hooks[0].command, {
+          cwd: root,
+          env: {
+            ...env,
+            ECC_GOVERNANCE_CAPTURE: '1',
+            CLAUDE_HOOK_EVENT_NAME: 'PreToolUse'
+          },
+          input: payload,
+          encoding: 'utf8',
+          shell: true,
+          timeout: 15000
+        });
+        assert.strictEqual(governed.status, 0, governed.stderr);
+        assert.ok(governed.stderr.includes('powershell.remove-item.force'));
+        assert.ok(!governed.stderr.includes(command), 'governance evidence should omit raw command text');
+      } finally {
+        cleanupTestDir(stateDir);
+      }
+    })
+  )
+    passed++;
+  else failed++;
+
+  if (
+    test('all string hook matchers are valid regular expressions', () => {
+      const hooksPath = path.join(__dirname, '..', '..', 'hooks', 'hooks.json');
+      const hooks = JSON.parse(fs.readFileSync(hooksPath, 'utf8'));
+
+      for (const [eventName, hookArray] of Object.entries(hooks.hooks)) {
+        for (const entry of hookArray) {
+          if (typeof entry.matcher !== 'string') continue;
+          assert.doesNotThrow(() => new RegExp(entry.matcher), `${eventName}/${entry.id || 'hook'} should use a valid regex matcher`);
+        }
+      }
     })
   )
     passed++;
@@ -3761,7 +3974,7 @@ async function runTests() {
       // Create a session .tmp file and a non-session .tmp file
       const sessionFile = path.join(sessionsDir, '2026-02-11-abc-session.tmp');
       const otherTmpFile = path.join(sessionsDir, 'other-data.tmp');
-      fs.writeFileSync(sessionFile, '# Session\n');
+      fs.writeFileSync(sessionFile, buildSessionStartFixture('', { title: '# Session' }));
       fs.writeFileSync(otherTmpFile, 'some other data\n');
 
       try {
@@ -4199,9 +4412,13 @@ async function runTests() {
   else failed++;
 
   if (
-    await asyncTest('source calls process.exit(0) after writing output', async () => {
+    await asyncTest('source exits only after stdout finishes writing', async () => {
       const formatSource = fs.readFileSync(path.join(scriptsDir, 'post-edit-format.js'), 'utf8');
-      assert.ok(formatSource.includes('process.exit(0)'), 'Should call process.exit(0) for clean termination');
+      assert.match(
+        formatSource,
+        /process\.stdout\.write\(data,\s*\(\)\s*=>\s*process\.exit\(0\)\)/,
+        'Should exit from the stdout write callback'
+      );
     })
   )
     passed++;
@@ -4210,7 +4427,7 @@ async function runTests() {
   if (
     await asyncTest('uses process.stdout.write instead of console.log for pass-through', async () => {
       const formatSource = fs.readFileSync(path.join(scriptsDir, 'post-edit-format.js'), 'utf8');
-      assert.ok(formatSource.includes('process.stdout.write(data)'), 'Should use process.stdout.write to avoid trailing newline');
+      assert.ok(formatSource.includes('process.stdout.write(data,'), 'Should use process.stdout.write to avoid trailing newline');
       // Verify no console.log(data) for pass-through (console.error for warnings is OK)
       const lines = formatSource.split('\n');
       const passThrough = lines.filter(l => /console\.log\(data\)/.test(l));
@@ -4223,9 +4440,13 @@ async function runTests() {
   console.log('\nRound 29: post-edit-typecheck.js (exit and pass-through):');
 
   if (
-    await asyncTest('source calls process.exit(0) after writing output', async () => {
+    await asyncTest('source exits only after stdout finishes writing', async () => {
       const tcSource = fs.readFileSync(path.join(scriptsDir, 'post-edit-typecheck.js'), 'utf8');
-      assert.ok(tcSource.includes('process.exit(0)'), 'Should call process.exit(0) for clean termination');
+      assert.match(
+        tcSource,
+        /process\.stdout\.write\(data,\s*\(\)\s*=>\s*process\.exit\(0\)\)/,
+        'Should exit from the stdout write callback'
+      );
     })
   )
     passed++;
@@ -4234,7 +4455,7 @@ async function runTests() {
   if (
     await asyncTest('uses process.stdout.write instead of console.log for pass-through', async () => {
       const tcSource = fs.readFileSync(path.join(scriptsDir, 'post-edit-typecheck.js'), 'utf8');
-      assert.ok(tcSource.includes('process.stdout.write(data)'), 'Should use process.stdout.write');
+      assert.ok(tcSource.includes('process.stdout.write(data,'), 'Should use process.stdout.write');
       const lines = tcSource.split('\n');
       const passThrough = lines.filter(l => /console\.log\(data\)/.test(l));
       assert.strictEqual(passThrough.length, 0, 'Should not use console.log(data) for pass-through');
@@ -4676,11 +4897,11 @@ async function runTests() {
     passed++;
   else failed++;
 
-  // Round 41: pre-compact.js (multiple session files)
+  // Round 41: pre-compact.js (multiple sessions for the current worktree)
   console.log('\nRound 41: pre-compact.js (multiple session files):');
 
   if (
-    await asyncTest('annotates only the newest session file when multiple exist', async () => {
+    await asyncTest('annotates only the newest session when multiple match the current worktree', async () => {
       const isoHome = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-compact-multi-'));
       const sessionsDir = getCanonicalSessionsDir(isoHome);
       fs.mkdirSync(sessionsDir, { recursive: true });
@@ -4688,11 +4909,12 @@ async function runTests() {
       // Create two session files with different mtimes
       const olderSession = path.join(sessionsDir, '2026-01-01-older-session.tmp');
       const newerSession = path.join(sessionsDir, '2026-02-11-newer-session.tmp');
-      fs.writeFileSync(olderSession, '# Older Session\n');
+      const olderContent = buildSessionStartFixture('', { title: '# Older Session' });
+      fs.writeFileSync(olderSession, olderContent);
       // Small delay to ensure different mtime
       const now = Date.now();
       fs.utimesSync(olderSession, new Date(now - 60000), new Date(now - 60000));
-      fs.writeFileSync(newerSession, '# Newer Session\n');
+      fs.writeFileSync(newerSession, buildSessionStartFixture('', { title: '# Newer Session' }));
 
       try {
         const result = await runScript(path.join(scriptsDir, 'pre-compact.js'), '', {
@@ -4702,11 +4924,11 @@ async function runTests() {
         assert.strictEqual(result.code, 0);
 
         const newerContent = fs.readFileSync(newerSession, 'utf8');
-        const olderContent = fs.readFileSync(olderSession, 'utf8');
+        const updatedOlderContent = fs.readFileSync(olderSession, 'utf8');
 
-        // findFiles sorts by mtime newest first, so sessions[0] is the newest
+        // findFiles sorts matches by mtime, so the newest matching worktree wins.
         assert.ok(newerContent.includes('Compaction occurred'), 'Should annotate the newest session file');
-        assert.strictEqual(olderContent, '# Older Session\n', 'Should NOT annotate older session files');
+        assert.strictEqual(updatedOlderContent, olderContent, 'Should NOT annotate older session files');
       } finally {
         fs.rmSync(isoHome, { recursive: true, force: true });
       }
@@ -4827,7 +5049,11 @@ async function runTests() {
       const testDir = createTestDir();
       const transcriptPath = path.join(testDir, 'transcript.jsonl');
       // Only user messages — no tool_use entries at all
-      const lines = ['{"type":"user","content":"How does authentication work?"}', '{"type":"assistant","message":{"content":[{"type":"text","text":"It uses JWT"}]}}'];
+      const lines = [
+        '{"type":"user","content":"How does authentication work?"}',
+        '{"type":"assistant","message":{"content":[{"type":"text","text":"It uses JWT"}]}}',
+        '{"type":"user","content":"Explain the token refresh path too"}'
+      ];
       fs.writeFileSync(transcriptPath, lines.join('\n'));
       const stdinJson = JSON.stringify({ transcript_path: transcriptPath });
 
@@ -5201,8 +5427,11 @@ async function runTests() {
     await asyncTest('handles stdin exceeding MAX_STDIN (1MB) gracefully', async () => {
       const testDir = createTestDir();
       const transcriptPath = path.join(testDir, 'transcript.jsonl');
-      // Create a minimal valid transcript so env var fallback works
-      fs.writeFileSync(transcriptPath, JSON.stringify({ type: 'user', content: 'Overflow test' }) + '\n');
+      // Create a substantive valid transcript so env var fallback works
+      fs.writeFileSync(
+        transcriptPath,
+        [JSON.stringify({ type: 'user', content: 'Overflow test' }), JSON.stringify({ type: 'user', content: 'Verify fallback behavior' })].join('\n') + '\n'
+      );
 
       // Create stdin > 1MB: truncated JSON will be invalid → falls back to env var
       const oversizedPayload = '{"transcript_path":"' + 'x'.repeat(1048600) + '"}';
@@ -5327,18 +5556,17 @@ async function runTests() {
     passed++;
   else failed++;
 
-  console.log('\nRound 59: check-console-log.js (stdin exceeding 1MB — truncation):');
+  console.log('\nRound 59: check-console-log.js (large stdin pass-through):');
 
   if (
-    await asyncTest('suppresses pass-through for oversized stdin (fail-open, #2090)', async () => {
-      // Send 1.2MB of data — exceeds the 1MB MAX_STDIN limit. Echoing the
-      // truncated string would emit a JSON document cut mid-stream, which the
-      // harness reports as a Stop hook JSON validation failure.
+    await asyncTest('preserves complete oversized stdin (#2924)', async () => {
+      // Direct/legacy entrypoints preserve the protocol payload. Production
+      // wrappers continue to enforce their own bounded-input policy.
       const payload = 'x'.repeat(1024 * 1024 + 200000);
       const result = await runScript(path.join(scriptsDir, 'check-console-log.js'), payload);
 
       assert.strictEqual(result.code, 0, 'Should exit 0 even with oversized stdin');
-      assert.strictEqual(result.stdout, '', 'Truncated stdin must not be echoed (empty stdout = no opinion)');
+      assert.strictEqual(result.stdout, payload, 'stdout should exactly match the complete stdin payload');
     })
   )
     passed++;
@@ -5429,20 +5657,16 @@ async function runTests() {
     passed++;
   else failed++;
 
-  console.log('\nRound 60: post-edit-console-warn.js (stdin exceeding 1MB — truncation):');
+  console.log('\nRound 60: post-edit-console-warn.js (large stdin pass-through):');
 
   if (
-    await asyncTest('truncates stdin at 1MB limit and still passes through data', async () => {
-      // Send 1.2MB of data — exceeds the 1MB MAX_STDIN limit
+    await asyncTest('preserves complete oversized stdin', async () => {
       const payload = 'x'.repeat(1024 * 1024 + 200000);
       const result = await runScript(path.join(scriptsDir, 'post-edit-console-warn.js'), payload);
 
       assert.strictEqual(result.code, 0, 'Should exit 0 even with oversized stdin');
-      // Data should be truncated — stdout significantly less than input
-      assert.ok(result.stdout.length < payload.length, `stdout (${result.stdout.length}) should be shorter than input (${payload.length})`);
-      // Should be approximately 1MB (last accepted chunk may push slightly over)
-      assert.ok(result.stdout.length <= 1024 * 1024 + 65536, `stdout (${result.stdout.length}) should be near 1MB, not unbounded`);
-      assert.ok(result.stdout.length > 0, 'Should still pass through truncated data');
+      assert.strictEqual(result.stdout, payload, 'stdout should exactly match the complete stdin payload');
+      assert.ok(result.stdout.length > 0, 'Should pass through complete data');
     })
   )
     passed++;
@@ -5819,6 +6043,8 @@ async function runTests() {
       const lines = [
         // Normal user message (string content) — should be included
         '{"type":"user","content":"Real user message"}',
+        // A second valid message keeps this fixture eligible for persistence
+        '{"type":"user","content":"Follow-up user message"}',
         // User message with numeric content — exercises the else: '' branch
         '{"type":"user","content":42}',
         // User message with boolean content — also hits the else branch
@@ -5953,40 +6179,32 @@ Some random content without the expected ### Context to Load section
     passed++;
   else failed++;
 
-  // ── Round 87: post-edit-format.js and post-edit-typecheck.js stdin overflow (1MB) ──
-  console.log('\nRound 87: post-edit-format.js (stdin exceeding 1MB — truncation):');
+  // ── Round 87: post-edit-format.js and post-edit-typecheck.js large stdin pass-through ──
+  console.log('\nRound 87: post-edit-format.js (large stdin pass-through):');
 
   if (
-    await asyncTest('truncates stdin at 1MB limit and still passes through data (post-edit-format)', async () => {
-      // Send 1.2MB of data — exceeds the 1MB MAX_STDIN limit (lines 14-22)
+    await asyncTest('preserves complete oversized stdin (post-edit-format)', async () => {
       const payload = 'x'.repeat(1024 * 1024 + 200000);
       const result = await runScript(path.join(scriptsDir, 'post-edit-format.js'), payload);
 
       assert.strictEqual(result.code, 0, 'Should exit 0 even with oversized stdin');
-      // Output should be truncated — significantly less than input
-      assert.ok(result.stdout.length < payload.length, `stdout (${result.stdout.length}) should be shorter than input (${payload.length})`);
-      // Output should be approximately 1MB (last accepted chunk may push slightly over)
-      assert.ok(result.stdout.length <= 1024 * 1024 + 65536, `stdout (${result.stdout.length}) should be near 1MB, not unbounded`);
-      assert.ok(result.stdout.length > 0, 'Should still pass through truncated data');
+      assert.strictEqual(result.stdout, payload, 'stdout should exactly match the complete stdin payload');
+      assert.ok(result.stdout.length > 0, 'Should pass through complete data');
     })
   )
     passed++;
   else failed++;
 
-  console.log('\nRound 87: post-edit-typecheck.js (stdin exceeding 1MB — truncation):');
+  console.log('\nRound 87: post-edit-typecheck.js (large stdin pass-through):');
 
   if (
-    await asyncTest('truncates stdin at 1MB limit and still passes through data (post-edit-typecheck)', async () => {
-      // Send 1.2MB of data — exceeds the 1MB MAX_STDIN limit (lines 16-24)
+    await asyncTest('preserves complete oversized stdin (post-edit-typecheck)', async () => {
       const payload = 'x'.repeat(1024 * 1024 + 200000);
       const result = await runScript(path.join(scriptsDir, 'post-edit-typecheck.js'), payload);
 
       assert.strictEqual(result.code, 0, 'Should exit 0 even with oversized stdin');
-      // Output should be truncated — significantly less than input
-      assert.ok(result.stdout.length < payload.length, `stdout (${result.stdout.length}) should be shorter than input (${payload.length})`);
-      // Output should be approximately 1MB (last accepted chunk may push slightly over)
-      assert.ok(result.stdout.length <= 1024 * 1024 + 65536, `stdout (${result.stdout.length}) should be near 1MB, not unbounded`);
-      assert.ok(result.stdout.length > 0, 'Should still pass through truncated data');
+      assert.strictEqual(result.stdout, payload, 'stdout should exactly match the complete stdin payload');
+      assert.ok(result.stdout.length > 0, 'Should pass through complete data');
     })
   )
     passed++;
@@ -6208,7 +6426,9 @@ Some random content without the expected ### Context to Load section
 
       // Create a minimal session .tmp file
       const sessionFile = path.join(sessionsDir, '2026-01-01-test-session.tmp');
-      fs.writeFileSync(sessionFile, '# Session: 2026-01-01\n');
+      fs.writeFileSync(sessionFile, buildSessionStartFixture('', {
+        title: '# Session: 2026-01-01'
+      }));
 
       // Create a minimal transcript with one user message
       const transcriptPath = path.join(testDir, 'transcript.jsonl');
